@@ -1,4 +1,3 @@
-#
 # This file is part of the PyMeasure package.
 #
 # Copyright (c) 2013-2024 PyMeasure Developers
@@ -244,13 +243,32 @@ class SDM3045X(Instrument):
         Checks for instrument errors and raises an exception if any are found.
         """
         while True:
-            error = self.ask("SYSTem:ERRor?")
-            error_code, error_message = error.strip().split(',', 1)
-            error_code = int(error_code)
+            error_response = self.ask("SYSTem:ERRor?")
+            error_response = error_response.strip()
+            if not error_response:
+                # Empty response, assume no errors
+                break
+
+            # Attempt to parse the error response
+            if ',' in error_response:
+                error_code_str, error_message = error_response.split(',', 1)
+                error_message = error_message.strip().strip('"')
+            else:
+                error_code_str = error_response
+                error_message = 'No error message'
+
+            try:
+                error_code = int(error_code_str)
+            except ValueError:
+                # Handle non-integer error codes
+                error_code = -1  # Assign a generic error code
+                error_message = error_response
+
             if error_code == 0:
+                # No error
                 break
             else:
-                raise Exception(f"Instrument Error {error_code}: {error_message.strip('\"')}")
+                raise Exception(f"Instrument Error {error_code}: {error_message}")
 
     ######################################################################
     # Configuration methods
@@ -460,4 +478,3 @@ class SDM3045X(Instrument):
         result = self.ask("READ?")
         self.check_errors()
         return float(result)
-
